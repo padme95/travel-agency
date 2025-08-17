@@ -1,0 +1,19 @@
+{
+  "name": "travel-agency-api",
+  "private": true,
+  "type": "commonjs",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "vercel dev",
+    "prepare": "echo \"No build needed for Vercel functions\""
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.55.0",
+    "stripe": "^18.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "@vercel/node": "^5.3.13"
+  }
+}
