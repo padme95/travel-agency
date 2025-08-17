@@ -29,5 +29,7 @@ export class PackageListComponent implements OnInit {
   ngOnInit() {
     this.api.list().subscribe(({ data }) => this.packages = (data as Package[]) ?? []);
   }
-  add(p: Package){ this.cart.add(p, 1); }
+   add(p: Package) {
+    this.cart.add(p, 1);
+  }
 }
