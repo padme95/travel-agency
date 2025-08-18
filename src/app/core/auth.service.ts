@@ -1,45 +1,44 @@
-// src/app/core/auth.service.ts
-import { Injectable } from '@angular/core';
+// src/app/core/auth.service.ts (trecho relevante)
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { supabase } from './supabase.client';
-
-export type AuthUser = { id: string; email?: string | null };
+import { CartService } from './cart.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private _user$ = new BehaviorSubject<AuthUser | null>(null);
-  readonly user$ = this._user$.asObservable();
+  private cart = inject(CartService);
+  user$ = new BehaviorSubject<any | null>(null);
 
-  constructor() { this.bootstrap(); }
-
-  private async bootstrap() {
-    const { data } = await supabase.auth.getUser();
-    this._user$.next(data.user ? { id: data.user.id, email: data.user.email } : null);
-    supabase.auth.onAuthStateChange((_e, session) => {
-      const u = session?.user ? { id: session.user.id, email: session.user.email } : null;
-      this._user$.next(u);
+  constructor() {
+    supabase.auth.getUser().then(({ data }) => {
+      this.user$.next(data.user ?? null);
+      if (data.user) this.cart.switchToUser(data.user.id);
+      else this.cart.switchToGuest();
     });
-  }
 
-  get currentUser(): AuthUser | null { return this._user$.value; }
+    supabase.auth.onAuthStateChange((event, session) => {
+      const user = session?.user ?? null;
+      this.user$.next(user);
 
-  async signUp(email: string, password: string, emailRedirectTo: string) {
-    const { data, error } = await supabase.auth.signUp({
-      email, password,
-      options: { emailRedirectTo }
+      if (user) this.cart.switchToUser(user.id);
+      else this.cart.switchToGuest();
     });
-    if (error) throw error;
-    return data;
   }
 
   async signIn(email: string, password: string) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    this.user$.next(data.user);
+    // switchToUser acontecerá pelo onAuthStateChange, mas não tem problema chamar aqui também:
+    this.cart.switchToUser(data.user!.id);
     return data;
   }
 
   async signOut() {
+    // não limpar carrinho: só trocar para guest depois que sair
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    this.user$.next(null);
+    this.cart.switchToGuest();
   }
 }

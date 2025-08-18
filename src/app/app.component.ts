@@ -2,21 +2,28 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { RouterLink, RouterOutlet, ActivatedRoute } from '@angular/router';
 import { AsyncPipe, NgIf } from '@angular/common';
+import { Subject, takeUntil } from 'rxjs';
+
 import { AuthService } from './core/auth.service';
 import { CartService } from './core/cart.service';
-import { Subject, takeUntil } from 'rxjs';
+import { IdleLogoutService } from './core/idle-logout.service';
 
 @Component({
   standalone: true,
   selector: 'app-root',
   imports: [RouterOutlet, RouterLink, AsyncPipe, NgIf],
   template: `
-    <!-- Banner de confirmação -->
-    <div *ngIf="banner" class="py-2 px-3" style="background:#e8f7ee;color:#14532d">
+    <!-- Banner de confirmação de e-mail -->
+    <div *ngIf="bannerConfirmed" class="py-2 px-3" style="background:#e8f7ee;color:#14532d">
       ✅ Email confirmado! Faça login para continuar.
       <a routerLink="/auth/login" [queryParams]="{ next: nextParam }" class="ms-1 text-decoration-underline">
         Entrar
       </a>
+    </div>
+
+    <!-- Banner de logout por inatividade -->
+    <div *ngIf="bannerIdle" class="alert alert-warning m-0 rounded-0 text-center">
+      Você foi desconectado por inatividade.
     </div>
 
     <nav class="navbar navbar-expand-lg navbar-light bg-body-tertiary">
@@ -54,12 +61,12 @@ import { Subject, takeUntil } from 'rxjs';
           <!-- Usuário logado -->
           <div *ngIf="auth.user$ | async as user; else guestBlock" class="d-flex gap-2 align-items-center">
             <small class="text-secondary d-none d-sm-inline">Olá, {{ user?.email }}</small>
-            <button class="btn btn-outline-secondary btn-sm" (click)="auth.signOut()">Sair</button>
+            <button class="btn btn-outline-secondary btn-sm" (click)="signOut()">Sair</button>
           </div>
 
-          <!-- Visitante (esconde quando banner aparece) -->
+          <!-- Visitante (esconde somente quando banner de confirmação aparece) -->
           <ng-template #guestBlock>
-            <div *ngIf="!banner" class="d-flex gap-2">
+            <div *ngIf="!bannerConfirmed" class="d-flex gap-2">
               <a class="btn btn-outline-primary btn-sm" routerLink="/auth/login">Entrar</a>
               <a class="btn btn-primary btn-sm" routerLink="/auth/signup">Cadastrar</a>
             </div>
@@ -77,26 +84,69 @@ export class AppComponent implements OnInit, OnDestroy {
   auth = inject(AuthService);
   private cart = inject(CartService);
   private route = inject(ActivatedRoute);
+  private idle = inject(IdleLogoutService);
 
   count = 0;
-  banner = false;
+  bannerConfirmed = false;  // "Email confirmado!"
+  bannerIdle = false;       // "desconectado por inatividade"
   nextParam: string | null = null;
 
   private destroy$ = new Subject<void>();
 
   ngOnInit() {
-    // contador reativo
+    // contador reativo do carrinho
     this.cart.items$
       .pipe(takeUntil(this.destroy$))
       .subscribe(items => this.count = items.reduce((a, i) => a + i.qty, 0));
 
-    // banner de confirmação
+    // banners com base nos query params
     this.route.queryParamMap
       .pipe(takeUntil(this.destroy$))
       .subscribe(qp => {
-        this.banner = qp.get('m') === 'confirmed';
+        this.bannerConfirmed = qp.get('m') === 'confirmed';
+        // mostra banner de inatividade se veio via query param
+        this.bannerIdle = qp.get('m') === 'idle' || this.bannerIdle;
+
         this.nextParam = qp.get('next') || '/';
+
+        // se veio via query param (m=idle), oculta após 5s
+        if (this.bannerIdle) {
+          setTimeout(() => (this.bannerIdle = false), 5000);
+        }
       });
+
+    // liga/desliga o watcher de inatividade conforme login
+    this.auth.user$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(user => {
+        if (user) {
+          this.bannerIdle = false;
+          this.idle.start();
+        } else {
+          this.idle.stop();
+        }
+      });
+
+    // ouve o evento de logout por inatividade e mostra banner
+    this.idle.idleLogout$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.bannerIdle = true;
+        setTimeout(() => (this.bannerIdle = false), 5000);
+      });
+
+    // se houve logout por inatividade numa navegação direta/refresh, mostra banner
+    if (sessionStorage.getItem('idle-logged-out') === '1') {
+      this.bannerIdle = true;
+      sessionStorage.removeItem('idle-logged-out');
+      setTimeout(() => (this.bannerIdle = false), 5000);
+    }
+  }
+
+  signOut() {
+    // logout manual: tira flag de idle (se existir)
+    sessionStorage.removeItem('idle-logged-out');
+    this.auth.signOut();
   }
 
   ngOnDestroy() {

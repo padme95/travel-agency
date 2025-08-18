@@ -3,34 +3,101 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { Package } from './models';
 
-export type CartItem = { pkg: Package; qty: number };
-const KEY = 'cart_v1';
+export interface CartItem {
+  pkg: Package;
+  qty: number;
+}
 
 @Injectable({ providedIn: 'root' })
 export class CartService {
-  private state = new BehaviorSubject<CartItem[]>(this.load());
-  readonly items$ = this.state.asObservable();
+  private readonly GUEST_KEY = 'cart_guest_v1';
+  private currentKey = this.GUEST_KEY;
 
-  private load(): CartItem[] {
-    try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; }
+  private itemsSubject = new BehaviorSubject<CartItem[]>(this.load(this.currentKey));
+  items$ = this.itemsSubject.asObservable();
+
+  /** Troca o carrinho para o do usuário logado, mesclando o carrinho de visitante */
+  switchToUser(uid: string) {
+    const userKey = this.userKey(uid);
+    const guestItems = this.load(this.GUEST_KEY);
+    const userItems = this.load(userKey);
+
+    // merge guest -> user (somando quantidades por pacote)
+    const merged = this.merge(userItems, guestItems);
+    this.save(userKey, merged);
+
+    // limpa o carrinho de guest (para não duplicar na próxima vez)
+    this.save(this.GUEST_KEY, []);
+
+    // passa a operar no carrinho do usuário
+    this.currentKey = userKey;
+    this.itemsSubject.next(this.load(this.currentKey));
   }
-  private save(items: CartItem[]) { localStorage.setItem(KEY, JSON.stringify(items)); }
 
-  items() { return this.state.value; }
-  totalCents() { return this.state.value.reduce((a,i)=> a + i.qty*i.pkg.price_cents, 0); }
+  /** Troca o carrinho para visitante (sem apagar) */
+  switchToGuest() {
+    this.currentKey = this.GUEST_KEY;
+    this.itemsSubject.next(this.load(this.currentKey));
+  }
 
   add(pkg: Package, qty = 1) {
-    const items = [...this.state.value];
-    const idx = items.findIndex(i => i.pkg.id === pkg.id);
-    if (idx !== -1) items[idx] = { ...items[idx], qty: items[idx].qty + qty };
-    else items.push({ pkg, qty });
-    this.save(items); this.state.next(items);
+    const list = [...this.itemsSubject.value];
+    const idx = list.findIndex(i => i.pkg.id === pkg.id);
+    if (idx >= 0) list[idx] = { pkg: list[idx].pkg, qty: list[idx].qty + qty };
+    else list.push({ pkg, qty });
+    this.commit(list);
   }
 
-  remove(packageId: number) {
-    const items = this.state.value.filter(i => i.pkg.id !== packageId);
-    this.save(items); this.state.next(items);
+  remove(pkgId: number) {
+    const list = this.itemsSubject.value.filter(i => i.pkg.id !== pkgId);
+    this.commit(list);
   }
 
-  clear() { this.save([]); this.state.next([]); }
+  clear() {
+    this.commit([]);
+  }
+
+  items() {
+    return this.itemsSubject.value;
+  }
+
+  totalCents() {
+    return this.itemsSubject.value.reduce((acc, i) => acc + i.qty * i.pkg.price_cents, 0);
+  }
+
+  // ----------------- helpers -----------------
+  private userKey(uid: string) {
+    return `cart_user_${uid}_v1`;
+  }
+
+  private load(key: string): CartItem[] {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? (JSON.parse(raw) as CartItem[]) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private save(key: string, items: CartItem[]) {
+    try {
+      localStorage.setItem(key, JSON.stringify(items));
+    } catch {}
+  }
+
+  private commit(list: CartItem[]) {
+    this.save(this.currentKey, list);
+    this.itemsSubject.next(list);
+  }
+
+  private merge(base: CartItem[], add: CartItem[]) {
+    const map = new Map<number, CartItem>();
+    for (const it of base) map.set(it.pkg.id, { ...it });
+    for (const it of add) {
+      const found = map.get(it.pkg.id);
+      if (found) map.set(it.pkg.id, { pkg: found.pkg, qty: found.qty + it.qty });
+      else map.set(it.pkg.id, { ...it });
+    }
+    return Array.from(map.values());
+  }
 }

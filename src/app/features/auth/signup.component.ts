@@ -10,7 +10,7 @@ import { supabase } from '../../core/supabase.client';
   selector: 'app-signup',
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
-  <section class="container min-vh-100 d-flex align-items-center justify-content-center py-5">
+  <section class="container auth-shell justify-content-center">
     <div class="w-100" style="max-width: 480px;">
       <div class="text-center mb-4">
         <h1 class="h3 fw-bold mb-1">Criar conta</h1>

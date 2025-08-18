@@ -1,45 +1,129 @@
-// src/app/features/auth/reset-password.component.ts
+// src/app/features/auth/reset.component.ts
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { FormsModule, NgForm } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
 import { supabase } from '../../core/supabase.client';
 
 @Component({
   standalone: true,
-  selector: 'app-reset-password',
-  imports: [CommonModule, FormsModule],
+  selector: 'app-reset',
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
-    <h2>Definir nova senha</h2>
-    <form (ngSubmit)="submit()">
-      <label>Nova senha<br>
-        <input [(ngModel)]="password" name="password" type="password" required minlength="6">
-      </label><br><br>
-      <button [disabled]="loading">{{ loading ? 'Atualizando...' : 'Salvar nova senha' }}</button>
-      <p *ngIf="msg" [style.color]="err ? 'crimson' : '#14532d'">{{ msg }}</p>
-    </form>
+  <section class="container auth-shell justify-content-center">
+    <div class="w-100" style="max-width:480px">
+      <div class="text-center mb-4">
+        <h1 class="h3 fw-bold mb-1">Definir nova senha</h1>
+        <p class="text-secondary mb-0">Abra esta página pelo link do e-mail</p>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-body p-4">
+
+          <div *ngIf="checking" class="text-center my-3">
+            <div class="spinner-border" role="status"></div>
+            <div class="small text-secondary mt-2">Verificando link…</div>
+          </div>
+
+          <div *ngIf="!checking && !ready" class="alert alert-warning">
+            Link inválido ou expirado. <a routerLink="/auth/forgot" class="alert-link">Solicitar novo link</a>.
+          </div>
+
+          <form #f="ngForm" (ngSubmit)="submit(f)" novalidate *ngIf="!checking">
+            <div class="mb-3">
+              <label class="form-label">Nova senha</label>
+              <div class="input-group">
+                <input [type]="show ? 'text' : 'password'" class="form-control"
+                       name="password" [(ngModel)]="password"
+                       required minlength="6" [disabled]="!ready"
+                       [class.is-invalid]="f.submitted && !f.controls['password']?.valid">
+                <button type="button" class="btn btn-outline-secondary" (click)="show = !show">
+                  <i class="bi" [class.bi-eye]="!show" [class.bi-eye-slash]="show"></i>
+                </button>
+              </div>
+              <div class="form-text">Mínimo de 6 caracteres.</div>
+              <div class="invalid-feedback d-block" *ngIf="f.submitted && !f.controls['password']?.valid">
+                Informe uma senha válida.
+              </div>
+            </div>
+
+            <button class="btn btn-primary w-100" [disabled]="loading || !ready">
+              <span *ngIf="!loading"><i class="bi bi-check2-circle me-1"></i> Salvar nova senha</span>
+              <span *ngIf="loading">Salvando...</span>
+            </button>
+
+            <p *ngIf="msg" class="mt-3 mb-0" [class.text-danger]="error" [class.text-success]="!error">
+              {{ msg }}
+            </p>
+          </form>
+
+          <div class="text-center mt-3" *ngIf="!checking">
+            <a routerLink="/auth/login" class="small">Voltar ao login</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
   `
 })
-export class ResetPasswordComponent {
+export class ResetComponent {
   private router = inject(Router);
-  private route = inject(ActivatedRoute);
 
   password = '';
+  show = false;
   loading = false;
-  msg = '';
-  err = false;
 
-  async submit() {
-    this.loading = true; this.msg = ''; this.err = false;
+  checking = true;
+  ready = false;
+  msg = '';
+  error = false;
+
+  constructor() { this.ensureSessionFromUrl(); }
+
+  /** Aceita tokens no #hash ou ?query, cria sessão e habilita o formulário */
+  private async ensureSessionFromUrl() {
+    try {
+      // 1) tentar no hash
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      let type = hash.get('type');
+      let access_token = hash.get('access_token');
+      let refresh_token = hash.get('refresh_token');
+
+      // 2) fallback: tentar na query (?access_token=...)
+      if (!access_token || !refresh_token) {
+        const qs = new URLSearchParams(window.location.search);
+        type = type || qs.get('type') || undefined as any;
+        access_token = access_token || qs.get('access_token') || undefined as any;
+        refresh_token = refresh_token || qs.get('refresh_token') || undefined as any;
+      }
+
+      if (type === 'recovery' && access_token && refresh_token) {
+        const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+        if (error) throw error;
+        this.ready = true;
+      } else {
+        // último fallback: talvez já exista sessão temporária
+        const { data } = await supabase.auth.getSession();
+        this.ready = !!data.session;
+      }
+    } catch {
+      this.ready = false;
+    } finally {
+      this.checking = false;
+    }
+  }
+
+  async submit(f: NgForm) {
+    if (f.invalid || !this.ready) return;
+    this.loading = true; this.msg = ''; this.error = false;
     try {
       const { error } = await supabase.auth.updateUser({ password: this.password });
       if (error) throw error;
-      const next = this.route.snapshot.queryParamMap.get('next') || '/';
-      this.msg = 'Senha atualizada! Faça login para continuar.';
-      setTimeout(() => this.router.navigate(['/auth/login'], { queryParams: { next } }), 800);
+      this.msg = 'Senha atualizada com sucesso! Faça login novamente.';
+      setTimeout(() => this.router.navigate(['/auth/login'], { queryParams: { m: 'reset_ok' } }), 1200);
     } catch (e: any) {
-      this.msg = e?.message || 'Falha ao atualizar senha';
-      this.err = true;
+      this.error = true;
+      this.msg = e?.message || 'Não foi possível alterar a senha. Solicite um novo link.';
     } finally {
       this.loading = false;
     }

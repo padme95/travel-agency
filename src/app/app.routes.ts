@@ -9,7 +9,8 @@ import { LoginComponent } from './features/auth/login.component';
 import { SignupComponent } from './features/auth/signup.component';
 import { authGuard } from './core/auth.guard';
 import { AuthCallbackComponent } from './features/auth/callback.component';
-import { ResetPasswordComponent } from './features/auth/reset-password.component';
+import { ResetComponent,  } from './features/auth/reset-password.component';
+import { ForgotComponent } from './features/auth/forgot.component';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent },
@@ -20,6 +21,8 @@ export const routes: Routes = [
   { path: 'auth/login', component: LoginComponent },
   { path: 'auth/signup', component: SignupComponent },
   { path: 'auth/callback', component: AuthCallbackComponent },
-  { path: 'auth/reset', component: ResetPasswordComponent },
+  { path: 'auth/reset', component: ResetComponent },
+  { path: 'auth/forgot', component: ForgotComponent },
+
   { path: '**', redirectTo: '' },
 ];

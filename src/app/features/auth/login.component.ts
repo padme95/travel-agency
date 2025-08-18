@@ -1,3 +1,4 @@
+// src/app/features/auth/login.component.ts
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NgForm } from '@angular/forms';
@@ -9,7 +10,7 @@ import { AuthService } from '../../core/auth.service';
   selector: 'app-login',
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
-  <section class="container min-vh-100 d-flex align-items-center justify-content-center py-5">
+  <section class="container auth-shell justify-content-center">
     <div class="w-100" style="max-width: 420px;">
       <div class="text-center mb-4">
         <h1 class="h3 fw-bold mb-1">Entrar</h1>
@@ -28,7 +29,7 @@ import { AuthService } from '../../core/auth.service';
                 [(ngModel)]="email"
                 required
                 email
-                [class.is-invalid]="f.submitted && !f.controls['email'].valid">
+                [class.is-invalid]="f.submitted && !f.controls['email']?.valid">
               <div class="invalid-feedback">Informe um email válido.</div>
             </div>
 
@@ -41,7 +42,7 @@ import { AuthService } from '../../core/auth.service';
                   name="password"
                   [(ngModel)]="password"
                   required minlength="6"
-                  [class.is-invalid]="f.submitted && !f.controls['password'].valid">
+                  [class.is-invalid]="f.submitted && !f.controls['password']?.valid">
                 <button class="btn btn-outline-secondary" type="button" (click)="show = !show">
                   <i class="bi" [class.bi-eye]="!show" [class.bi-eye-slash]="show"></i>
                 </button>
@@ -51,10 +52,17 @@ import { AuthService } from '../../core/auth.service';
               </div>
             </div>
 
-            <button class="btn btn-primary w-100" [disabled]="loading">
+            <button class="btn btn-primary w-100 mb-2" [disabled]="loading">
               <span *ngIf="!loading"><i class="bi bi-box-arrow-in-right me-1"></i> Entrar</span>
               <span *ngIf="loading">Entrando...</span>
             </button>
+
+            <!-- 🔗 Recuperação de senha -->
+            <div class="text-center">
+              <a routerLink="/auth/reset" [queryParams]="{ email }" class="small text-decoration-none">
+                Esqueceu a senha?
+              </a>
+            </div>
 
             <p *ngIf="msg" class="mt-3 mb-0" [class.text-danger]="error" [class.text-success]="!error">{{ msg }}</p>
           </form>
