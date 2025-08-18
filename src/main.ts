@@ -6,6 +6,7 @@ import { routes } from './app/app.routes';
 import { registerLocaleData } from '@angular/common';
 import localePt from '@angular/common/locales/pt';
 import { LOCALE_ID } from '@angular/core';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
 registerLocaleData(localePt);
 

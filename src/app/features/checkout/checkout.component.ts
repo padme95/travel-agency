@@ -1,87 +1,6 @@
-// import { Component, OnInit } from '@angular/core';
-// import { CommonModule } from '@angular/common';
-// import { loadStripe } from '@stripe/stripe-js';
-// import { HttpClient } from '@angular/common/http';
-// import { CartService } from '../../core/cart.service';
-// import { supabase } from '../../core/supabase.client';
-
-// @Component({
-//   standalone: true,
-//   selector: 'app-checkout',
-//   imports: [CommonModule],
-//   template: `
-//   <h2>Checkout</h2>
-//   <p>Total: {{ (totalCents/100) | currency:'BRL' }}</p>
-//   <button (click)="pay()" [disabled]="loading">Pagar (teste)</button>
-//   <p *ngIf="msg">{{msg}}</p>
-//   `
-// })
-// export class CheckoutComponent implements OnInit {
-//   totalCents = 0;
-//   loading = false;
-//   msg = '';
-
-//   constructor(private http: HttpClient, private cart: CartService) {}
-
-//   async ngOnInit() {
-//     this.totalCents = this.cart.totalCents();
-//   }
-
-//   async pay() {
-//     this.loading = true;
-//     try {
-//       // 1) cria pedido pending no Supabase
-//       const user = (await supabase.auth.getUser()).data.user;
-//       const { data: order, error: orderErr } = await supabase.from('orders')
-//         .insert({ user_id: user?.id ?? null, total_cents: this.totalCents, currency: 'BRL', status: 'pending' })
-//         .select('*').single();
-//       if (orderErr) throw orderErr;
-
-//       // 2) itens do pedido
-//       const items = this.cart.items().map(i => ({
-//         order_id: order.id,
-//         package_id: i.pkg.id,
-//         qty: i.qty,
-//         unit_price_cents: i.pkg.price_cents
-//       }));
-//       const { error: itemsErr } = await supabase.from('order_items').insert(items);
-//       if (itemsErr) throw itemsErr;
-
-//       // 3) cria PaymentIntent no backend
-//       const { clientSecret }: any = await this.http.post('/api/create-payment-intent', {
-//         amount_cents: this.totalCents,
-//         currency: 'BRL',
-//         metadata: { order_id: order.id.toString() }
-//       }).toPromise();
-
-//       // 4) redireciona para método de pagamento
-//       const stripe = await loadStripe((import.meta as any).env['NG_APP_STRIPE_PUBLISHABLE_KEY']);
-//       if (!stripe) throw new Error('Stripe not loaded');
-
-//       const result = await stripe.confirmPayment({
-//         clientSecret,
-//         confirmParams: {
-//           return_url: window.location.origin + '/checkout', // simples
-//         },
-//       });
-
-//       if (result.error) {
-//         this.msg = 'Falha no pagamento: ' + result.error.message;
-//       } else {
-//         this.msg = 'Pagamento processando...';
-//       }
-//     } catch (e: any) {
-//       this.msg = 'Erro: ' + (e?.message ?? 'desconhecido');
-//     } finally {
-//       this.loading = false;
-//     }
-//   }
-// }
-
 // src/app/features/checkout/checkout.component.ts
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { CartService } from '../../core/cart.service';
 import { supabase } from '../../core/supabase.client';
 
@@ -90,79 +9,72 @@ import { supabase } from '../../core/supabase.client';
   selector: 'app-checkout',
   imports: [CommonModule],
   template: `
-    <h2>Checkout</h2>
+  <div class="container mt-5">
+    <h1 class="mb-4">Checkout</h1>
 
-    <ng-container *ngIf="totalCents > 0; else empty">
-      <p>Total: <strong>{{ (totalCents/100) | currency:'BRL' }}</strong></p>
+    <div class="card shadow-sm p-4">
+      <h4 class="fw-bold mb-3">
+        Total: <span class="text-success">{{ (total/100) | currency:'BRL' }}</span>
+      </h4>
 
-      <button (click)="pay()" [disabled]="loading">
+      <button class="btn btn-success btn-lg mb-3" [disabled]="loading || total===0" (click)="pay()">
+        <i class="bi bi-credit-card me-2"></i>
         {{ loading ? 'Processando...' : 'Pagar (simulação)' }}
       </button>
 
-      <p *ngIf="msg" style="margin-top:12px">{{ msg }}</p>
+      <p class="text-muted small mb-0">
+        * Modo simulação: cria o pedido já como <span class="text-danger fw-bold">paid</span> no Supabase (sem Stripe).
+      </p>
 
-      <small style="display:block;margin-top:12px;opacity:.8">
-        * Modo simulação: cria o pedido já como <code>paid</code> no Supabase (sem Stripe).
-      </small>
-    </ng-container>
-
-    <ng-template #empty>
-      <p>Seu carrinho está vazio.</p>
-    </ng-template>
+      <p *ngIf="msg" class="mt-3"
+         [class.text-success]="ok"
+         [class.text-danger]="!ok">{{ msg }}</p>
+    </div>
+  </div>
   `
 })
-export class CheckoutComponent implements OnInit {
-  totalCents = 0;
+export class CheckoutComponent {
   loading = false;
   msg = '';
+  ok = false;
 
-  constructor(private http: HttpClient, private cart: CartService) {}
+  constructor(private cart: CartService) {}
 
-  ngOnInit() {
-    this.totalCents = this.cart.totalCents();
+  /** total em centavos (recalculado a cada render) */
+  get total(): number {
+    return this.cart.totalCents();
   }
 
   async pay() {
+    if (this.total === 0) return;
     this.loading = true;
     this.msg = '';
-    try {
-      // se você estiver com RLS exigindo login, verifique sessão:
-      const { data: sessionData } = await supabase.auth.getUser();
-      const userId = sessionData.user?.id ?? null;
+    this.ok = false;
 
-      // cria o pedido diretamente como "paid" (simulação, sem Stripe)
-      const { data: order, error: orderErr } = await supabase
+    try {
+      const user = (await supabase.auth.getUser()).data.user;
+
+      const { data: order, error } = await supabase
         .from('orders')
         .insert({
-          user_id: userId,            // se RLS bloquear sem login, logue antes
-          total_cents: this.totalCents,
+          user_id: user?.id ?? null,
+          total_cents: this.total,
           currency: 'BRL',
-          status: 'paid'
+          status: 'paid' // simulação
         })
         .select('*')
         .single();
 
-      if (orderErr) throw orderErr;
+      if (error) throw error;
 
-      // (opcional) salvar itens do carrinho:
-      // const items = this.cart.items().map(i => ({
-      //   order_id: order.id,
-      //   package_id: i.pkg.id,
-      //   qty: i.qty,
-      //   unit_price_cents: i.pkg.price_cents
-      // }));
-      // const { error: itemsErr } = await supabase.from('order_items').insert(items);
-      // if (itemsErr) throw itemsErr;
-
+      this.ok = true;
+      this.msg = '✅ Pedido criado como pago (simulação).';
       this.cart.clear();
-      this.totalCents = 0;
-      this.msg = '✅ Pedido criado como pago (simulação). Confira em Supabase → Table Editor → orders.';
     } catch (e: any) {
-      // dica comum: se aparecer "permission denied" é por causa do RLS exigindo login
-      this.msg = 'Erro: ' + (e?.message ?? 'desconhecido');
+      this.ok = false;
+      this.msg = e?.message || 'Erro ao criar pedido.';
     } finally {
       this.loading = false;
     }
   }
 }
-

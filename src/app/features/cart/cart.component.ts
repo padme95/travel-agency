@@ -11,51 +11,70 @@ import { map } from 'rxjs/operators';
   selector: 'app-cart',
   imports: [CommonModule, RouterLink],
   template: `
-    <h2>🛒 Carrinho</h2>
+    <h2 class="h4 mb-3">Carrinho</h2>
 
     <ng-container *ngIf="items$ | async as items; else empty">
-      <table class="cart" *ngIf="items.length; else empty">
-        <thead>
-          <tr>
-            <th>Pacote</th>
-            <th class="qty-col">Qtd</th>
-            <th class="num">Preço</th>
-            <th class="num">Total</th>
-            <th style="width:100px"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let i of items; trackBy: trackById">
-            <td class="title">{{ i.pkg.title }}</td>
-            <td class="qty">{{ i.qty }}</td>
-            <td class="num">{{ (i.pkg.price_cents/100) | currency:'BRL' }}</td>
-            <td class="num">{{ (i.qty * i.pkg.price_cents / 100) | currency:'BRL' }}</td>
-            <td><button (click)="remove(i.pkg.id)">Remover</button></td>
-          </tr>
-        </tbody>
-      </table>
+      <div *ngIf="items.length; else empty">
 
-      <p class="grand" *ngIf="items.length">
-        <strong>Total: {{ ((totalCents$ | async) ?? 0) / 100 | currency:'BRL' }}</strong>
-      </p>
+        <!-- MOBILE: cards (sem scroll lateral) -->
+        <div class="d-sm-none">
+          <div class="card mb-2" *ngFor="let i of items; trackBy: trackById">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-1">
+                <h5 class="card-title mb-0 me-2">{{ i.pkg.title }}</h5>
+                <button class="btn btn-outline-danger btn-sm" (click)="remove(i.pkg.id)">Remover</button>
+              </div>
+              <p class="card-text text-secondary mb-2">{{ i.pkg.description }}</p>
+              <div class="d-flex flex-wrap gap-3">
+                <span><strong>Qtd:</strong> {{ i.qty }}</span>
+                <span><strong>Preço:</strong> {{ (i.pkg.price_cents/100) | currency:'BRL' }}</span>
+                <span><strong>Total:</strong> {{ (i.qty * i.pkg.price_cents / 100) | currency:'BRL' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
 
-      <a routerLink="/checkout" *ngIf="items.length">Ir para o checkout</a>
+        <!-- DESKTOP/TABLET: tabela normal -->
+        <div class="d-none d-sm-block">
+          <div class="table-responsive">
+            <table class="table align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Pacote</th>
+                  <th class="text-center">Qtd</th>
+                  <th class="text-end">Preço</th>
+                  <th class="text-end">Total</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let i of items; trackBy: trackById">
+                  <td class="title">{{ i.pkg.title }}</td>
+                  <td class="text-center">{{ i.qty }}</td>
+                  <td class="text-end">{{ (i.pkg.price_cents/100) | currency:'BRL' }}</td>
+                  <td class="text-end">{{ (i.qty * i.pkg.price_cents / 100) | currency:'BRL' }}</td>
+                  <td><button class="btn btn-outline-danger btn-sm" (click)="remove(i.pkg.id)">Remover</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- total + checkout -->
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3 mt-3">
+          <strong>Total: {{ ((totalCents$ | async) ?? 0) / 100 | currency:'BRL' }}</strong>
+          <a routerLink="/checkout" class="btn btn-success">Ir para o checkout</a>
+        </div>
+      </div>
     </ng-container>
 
     <ng-template #empty>
-      <p>Seu carrinho está vazio.</p>
-      <a routerLink="/pacotes">Ver pacotes</a>
+      <div class="alert alert-info">Seu carrinho está vazio.</div>
+      <a routerLink="/pacotes" class="btn btn-primary">Ver pacotes</a>
     </ng-template>
   `,
   styles: [`
-    .cart{width:100%;border-collapse:collapse;margin-top:8px}
-    th,td{border:1px solid #ddd;padding:8px;vertical-align:middle}
-    thead th{background:#fafafa}
     .title{word-break:break-word}
-    .qty-col{width:72px;text-align:center}
-    .qty{text-align:center}
-    .num{text-align:right;white-space:nowrap}
-    .grand{margin:12px 0}
   `]
 })
 export class CartComponent implements OnInit {
@@ -72,6 +91,5 @@ export class CartComponent implements OnInit {
   }
 
   remove(id: number) { this.cart.remove(id); }
-
   trackById = (_: number, item: any) => item.pkg.id;
 }
