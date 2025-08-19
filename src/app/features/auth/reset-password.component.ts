@@ -19,7 +19,6 @@ import { supabase } from '../../core/supabase.client';
 
       <div class="card shadow-sm">
         <div class="card-body p-4">
-
           <div *ngIf="checking" class="text-center my-3">
             <div class="spinner-border" role="status"></div>
             <div class="small text-secondary mt-2">Verificando link…</div>
@@ -52,9 +51,8 @@ import { supabase } from '../../core/supabase.client';
               <span *ngIf="loading">Salvando...</span>
             </button>
 
-            <p *ngIf="msg" class="mt-3 mb-0" [class.text-danger]="error" [class.text-success]="!error">
-              {{ msg }}
-            </p>
+            <p *ngIf="msg" class="mt-3 mb-0"
+               [class.text-danger]="error" [class.text-success]="!error">{{ msg }}</p>
           </form>
 
           <div class="text-center mt-3" *ngIf="!checking">
@@ -80,29 +78,39 @@ export class ResetComponent {
 
   constructor() { this.ensureSessionFromUrl(); }
 
-  /** Aceita tokens no #hash ou ?query, cria sessão e habilita o formulário */
   private async ensureSessionFromUrl() {
     try {
-      // 1) tentar no hash
+      // Hash
       const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-      let type = hash.get('type');
-      let access_token = hash.get('access_token');
-      let refresh_token = hash.get('refresh_token');
+      let type = hash.get('type') || undefined as any;
+      let access_token = hash.get('access_token') || undefined as any;
+      let refresh_token = hash.get('refresh_token') || undefined as any;
 
-      // 2) fallback: tentar na query (?access_token=...)
-      if (!access_token || !refresh_token) {
-        const qs = new URLSearchParams(window.location.search);
-        type = type || qs.get('type') || undefined as any;
-        access_token = access_token || qs.get('access_token') || undefined as any;
-        refresh_token = refresh_token || qs.get('refresh_token') || undefined as any;
+      // Query
+      const qs = new URLSearchParams(window.location.search);
+      type = type || (qs.get('type') as any);
+      access_token = access_token || qs.get('access_token') || qs.get('token') || undefined as any;
+      refresh_token = refresh_token || qs.get('refresh_token') || undefined as any;
+
+      // Code (PKCE / magic link)
+      const code = qs.get('code');
+      if (!access_token && code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+        if (error) throw error;
+        this.ready = true;
+        this.checking = false;
+        return;
       }
 
-      if (type === 'recovery' && access_token && refresh_token) {
-        const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+      // Tokens
+      if ((type === 'recovery' || type === 'signup' || type === 'magiclink') && access_token) {
+        const { error } = await supabase.auth.setSession({
+          access_token,
+          refresh_token: refresh_token || ''
+        });
         if (error) throw error;
         this.ready = true;
       } else {
-        // último fallback: talvez já exista sessão temporária
         const { data } = await supabase.auth.getSession();
         this.ready = !!data.session;
       }

@@ -57,9 +57,9 @@ import { AuthService } from '../../core/auth.service';
               <span *ngIf="loading">Entrando...</span>
             </button>
 
-            <!-- 🔗 Recuperação de senha -->
+            <!-- 🔗 Recuperação de senha (CORRIGIDO: vai para /auth/forgot) -->
             <div class="text-center">
-              <a routerLink="/auth/reset" [queryParams]="{ email }" class="small text-decoration-none">
+              <a routerLink="/auth/forgot" [queryParams]="{ email }" class="small text-decoration-none">
                 Esqueceu a senha?
               </a>
             </div>
