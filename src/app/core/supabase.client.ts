@@ -8,11 +8,12 @@ export const supabase: SupabaseClient = createClient(
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: false,   // nós tratamos a URL manualmente no /auth/reset
-      flowType: 'pkce',            // <<< usa ?code=..., mais resistente a scanners
+      detectSessionInUrl: false,
       storageKey: 'sb-auth-rosilias-v1',
-      // Se ainda ver erro de Lock, pode “burlar” o lock:
-      // lock: async (_name, acquire) => await acquire(),
-    }
+      // Lock “no-op”: ignora o lock do navegador e apenas executa
+      lock: async (_name: string, _acquireTimeout: number, execute: () => Promise<any>) => {
+        return await execute();
+      },
+    },
   }
 );

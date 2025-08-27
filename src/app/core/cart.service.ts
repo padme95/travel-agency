@@ -26,15 +26,14 @@ export class CartService {
     const merged = this.merge(userItems, guestItems);
     this.save(userKey, merged);
 
-    // limpa o carrinho de guest (para não duplicar na próxima vez)
+
     this.save(this.GUEST_KEY, []);
 
-    // passa a operar no carrinho do usuário
     this.currentKey = userKey;
     this.itemsSubject.next(this.load(this.currentKey));
   }
 
-  /** Troca o carrinho para visitante (sem apagar) */
+
   switchToGuest() {
     this.currentKey = this.GUEST_KEY;
     this.itemsSubject.next(this.load(this.currentKey));

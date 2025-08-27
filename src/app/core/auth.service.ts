@@ -1,4 +1,3 @@
-// src/app/core/auth.service.ts (trecho relevante)
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { supabase } from './supabase.client';
@@ -29,13 +28,11 @@ export class AuthService {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
     this.user$.next(data.user);
-    // switchToUser acontecerá pelo onAuthStateChange, mas não tem problema chamar aqui também:
     this.cart.switchToUser(data.user!.id);
     return data;
   }
 
   async signOut() {
-    // não limpar carrinho: só trocar para guest depois que sair
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
     this.user$.next(null);
