@@ -1,0 +1,14 @@
+/* Layout dos formulários de autenticação */
+.auth-shell {
+  padding-top: 1rem;      /* mobile: respiro pequeno */
+  padding-bottom: 2rem;
+}
+
+/* A partir de sm (≥576px) centraliza verticalmente */
+@media (min-width: 576px) {
+  .auth-shell {
+    min-height: calc(100dvh - 64px); /* desconta o header aproximadamente */
+    display: flex;
+    align-items: center;
+  }
+}

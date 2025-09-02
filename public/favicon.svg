@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Beach Umbrella Favicon</title>
+  <desc>Simple umbrella icon for travel site favicon</desc>
+  <rect width="64" height="64" fill="none"/>
+  <!-- Canopy -->
+  <path d="M8 26
+           C16 10, 48 10, 56 26
+           Q48 24, 40 26
+           Q32 24, 24 26
+           Q16 24, 8 26 Z"
+        fill="#ff6b6b"/>
+  <!-- Panel seams -->
+  <path d="M32 14 L32 26" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" opacity="0.8"/>
+  <path d="M20 18 L24 26" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" opacity="0.8"/>
+  <path d="M44 18 L40 26" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" opacity="0.8"/>
+  <!-- Pole -->
+  <path d="M32 26 L32 52" stroke="#2f3b3f" stroke-width="3.2" stroke-linecap="round"/>
+  <!-- Little tilt handle -->
+  <path d="M32 34 L40 30" stroke="#2f3b3f" stroke-width="2.4" stroke-linecap="round"/>
+  <!-- Ground shadow -->
+  <ellipse cx="36" cy="54.5" rx="14" ry="2.6" fill="#000000" opacity="0.12"/>
+</svg>
