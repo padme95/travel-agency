@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, inject, ViewChild, ElementRef, ChangeDete
 import { CommonModule } from '@angular/common';
 import { loadStripe } from '@stripe/stripe-js';
 import type { Stripe as StripeJs, StripeElements, PaymentIntentResult } from '@stripe/stripe-js';
-import { environment } from '../../../environments/environment';
+import { environment } from '../../../environments/environment.prod';
 import { supabase } from '../../core/supabase.client';
 import { CartService } from '../../core/cart.service';
 
