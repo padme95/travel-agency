@@ -19,38 +19,24 @@ import { map } from 'rxjs/operators';
             <thead class="table-light">
               <tr>
                 <th>Pacote</th>
-                <th class="text-center" style="width:140px">Qtd</th>
-                <th class="text-end" style="width:140px">Preço</th>
+                <th class="text-center" style="width:80px">Qtd</th>
+                <th class="text-end col-price" style="width:140px">Preço</th>
                 <th class="text-end" style="width:160px">Total</th>
-                <th style="width:90px"></th>
+                <th class="text-end" style="width:56px"></th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let i of items; trackBy: trackById">
-                <td>{{ i.pkg.title }}</td>
-
-                <td class="text-center">
-                  <div class="d-flex justify-content-center align-items-center gap-2">
-                    <button class="btn btn-sm btn-outline-secondary"
-                            (click)="decrease(i.pkg.id)">-</button>
-                    <span>{{ i.qty }}</span>
-                    <button class="btn btn-sm btn-outline-secondary"
-                            (click)="increase(i.pkg)">+</button>
-                  </div>
-                </td>
-
+                <td class="text-wrap">{{ i.pkg.title }}</td>
+                <td class="text-center">{{ i.qty }}</td>
+                <td class="text-end col-price">{{ (i.pkg.price_cents/100) | currency:'BRL' }}</td>
+                <td class="text-end">{{ (i.qty*i.pkg.price_cents/100) | currency:'BRL' }}</td>
                 <td class="text-end">
-                  {{ (i.pkg.price_cents/100) | currency:'BRL' }}
-                </td>
-
-                <td class="text-end">
-                  {{ (i.qty * i.pkg.price_cents / 100) | currency:'BRL' }}
-                </td>
-
-                <td>
                   <button class="btn btn-outline-danger btn-sm"
-                          (click)="remove(i.pkg.id)">
-                    Remover
+                          (click)="remove(i.pkg.id)"
+                          title="Remover"
+                          aria-label="Remover item">
+                    <i class="bi bi-trash"></i>
                   </button>
                 </td>
               </tr>
@@ -69,7 +55,12 @@ import { map } from 'rxjs/operators';
       <div class="alert alert-info">Seu carrinho está vazio.</div>
       <a routerLink="/pacotes" class="btn btn-primary">Ver pacotes</a>
     </ng-template>
-  `
+  `,
+  styles: [`
+    @media (max-width: 576px){
+      .col-price { display: none; }
+    }
+  `]
 })
 export class CartComponent implements OnInit {
   items$!: Observable<any[]>;
@@ -84,17 +75,6 @@ export class CartComponent implements OnInit {
     );
   }
 
-  increase(pkg: any) {
-    this.cart.add(pkg, 1);
-  }
-
-  decrease(pkgId: number) {
-    this.cart.addById(pkgId, -1);
-  }
-
-  remove(id: number) {
-    this.cart.remove(id);
-  }
-
+  remove(id: number) { this.cart.remove(id); }
   trackById = (_: number, item: any) => item.pkg.id;
 }

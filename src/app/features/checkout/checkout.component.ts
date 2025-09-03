@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, inject, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { loadStripe } from '@stripe/stripe-js';
 import type { Stripe as StripeJs, StripeElements, PaymentIntentResult } from '@stripe/stripe-js';
 import { environment } from '../../../environments/environment.prod';
@@ -9,7 +10,7 @@ import { CartService } from '../../core/cart.service';
 @Component({
   standalone: true,
   selector: 'app-checkout',
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   template: `
   <div class="container py-3">
     <h2 class="h4 mb-3">Checkout</h2>
@@ -26,7 +27,10 @@ import { CartService } from '../../core/cart.service';
           <span *ngIf="!loading">Pagar {{ totalBRL }}</span>
           <span *ngIf="loading">Processando…</span>
         </button>
-        <a class="btn btn-outline-secondary" routerLink="/carrinho">Voltar ao carrinho</a>
+
+        <a class="btn btn-outline-secondary" routerLink="/carrinho">
+          Voltar ao carrinho
+        </a>
       </div>
 
       <p class="text-secondary small mt-2">
@@ -122,7 +126,6 @@ export class CheckoutComponent implements OnInit, OnDestroy {
 
     this.loading = true; this.msg = ''; this.ok = false;
 
-
     const result: PaymentIntentResult = await this.stripe.confirmPayment({
       elements: this.elements,
       confirmParams: { return_url: window.location.origin + '/checkout' },
@@ -181,7 +184,6 @@ export class CheckoutComponent implements OnInit, OnDestroy {
         this.ok = true;
         this.msg = '✅ Pagamento concluído com sucesso!';
         this.cart.clear();
-
         break;
 
       case 'processing':
