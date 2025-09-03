@@ -1,4 +1,3 @@
-// src/app/core/cart.service.ts
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { Package } from './models';
@@ -16,7 +15,6 @@ export class CartService {
   private itemsSubject = new BehaviorSubject<CartItem[]>(this.load(this.currentKey));
   items$ = this.itemsSubject.asObservable();
 
-  // ---- sessão/usuário ----
   switchToUser(uid: string) {
     const userKey = this.userKey(uid);
     const guestItems = this.load(this.GUEST_KEY);
@@ -35,7 +33,6 @@ export class CartService {
     this.itemsSubject.next(this.load(this.currentKey));
   }
 
-  // ---- operações do carrinho ----
   add(pkg: Package, qty = 1) {
     const list = [...this.itemsSubject.value];
     const idx = list.findIndex(i => i.pkg.id === pkg.id);
@@ -47,7 +44,7 @@ export class CartService {
     this.commit(list);
   }
 
-  /** Aumenta/diminui a quantidade pelo id do pacote (remove se ficar <= 0) */
+
   addById(pkgId: number, delta: number) {
     const list = [...this.itemsSubject.value];
     const idx = list.findIndex(i => i.pkg.id === pkgId);
@@ -62,7 +59,6 @@ export class CartService {
     }
   }
 
-  /** Define a quantidade explicitamente (remove se qty <= 0) */
   setQty(pkgId: number, qty: number) {
     const list = [...this.itemsSubject.value];
     const idx = list.findIndex(i => i.pkg.id === pkgId);
@@ -86,7 +82,6 @@ export class CartService {
     return this.itemsSubject.value.reduce((acc, i) => acc + i.qty * i.pkg.price_cents, 0);
   }
 
-  // ---- persistência ----
   private userKey(uid: string) {
     return `cart_user_${uid}_v1`;
   }

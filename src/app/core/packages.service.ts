@@ -1,7 +1,6 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { supabase } from './supabase.client';
 import { from } from 'rxjs';
-import { Package } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class PackagesService {
