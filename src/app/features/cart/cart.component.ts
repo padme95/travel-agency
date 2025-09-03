@@ -19,7 +19,7 @@ import { map } from 'rxjs/operators';
             <thead class="table-light">
               <tr>
                 <th>Pacote</th>
-                <th class="text-center" style="width:80px">Qtd</th>
+                <th class="text-center" style="width:140px">Qtd</th>
                 <th class="text-end col-price" style="width:140px">Preço</th>
                 <th class="text-end" style="width:160px">Total</th>
                 <th class="text-end" style="width:56px"></th>
@@ -28,9 +28,26 @@ import { map } from 'rxjs/operators';
             <tbody>
               <tr *ngFor="let i of items; trackBy: trackById">
                 <td class="text-wrap">{{ i.pkg.title }}</td>
-                <td class="text-center">{{ i.qty }}</td>
-                <td class="text-end col-price">{{ (i.pkg.price_cents/100) | currency:'BRL' }}</td>
-                <td class="text-end">{{ (i.qty*i.pkg.price_cents/100) | currency:'BRL' }}</td>
+
+                <!-- Coluna quantidade com botões + e - -->
+                <td class="text-center">
+                  <div class="d-inline-flex align-items-center gap-1">
+                    <button class="btn btn-sm btn-outline-secondary px-2"
+                            (click)="changeQty(i.pkg.id, -1)">−</button>
+                    <span class="mx-1">{{ i.qty }}</span>
+                    <button class="btn btn-sm btn-outline-secondary px-2"
+                            (click)="changeQty(i.pkg.id, 1)">+</button>
+                  </div>
+                </td>
+
+                <td class="text-end col-price">
+                  {{ (i.pkg.price_cents/100) | currency:'BRL' }}
+                </td>
+                <td class="text-end">
+                  {{ (i.qty*i.pkg.price_cents/100) | currency:'BRL' }}
+                </td>
+
+                <!-- Botão de remover com ícone de lixeira -->
                 <td class="text-end">
                   <button class="btn btn-outline-danger btn-sm"
                           (click)="remove(i.pkg.id)"
@@ -57,6 +74,7 @@ import { map } from 'rxjs/operators';
     </ng-template>
   `,
   styles: [`
+    /* Esconde a coluna "Preço" em telas pequenas para reduzir scroll lateral */
     @media (max-width: 576px){
       .col-price { display: none; }
     }
@@ -73,6 +91,10 @@ export class CartComponent implements OnInit {
     this.totalCents$ = this.items$.pipe(
       map(items => items.reduce((acc, i) => acc + i.qty * i.pkg.price_cents, 0))
     );
+  }
+
+  changeQty(pkgId: number, delta: number) {
+    this.cart.addById(pkgId, delta);
   }
 
   remove(id: number) { this.cart.remove(id); }
